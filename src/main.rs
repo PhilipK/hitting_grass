@@ -1,20 +1,21 @@
 use core::time;
 use legion::*;
 use legion::{Resources, World};
-use sdl2::event::WindowEvent;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::{Canvas, Texture};
-use sdl2::{controller::GameController, event::Event};
-use std::thread::{self, Thread};
-use std::{
-    collections::HashMap,
-    io::{Read, Write},
-};
+use sdl2::{ event::Event};
+use std::thread::{self};
+
+
+
+mod systems;
+mod components;
+
 
 pub struct Game {
     pub resources: Resources,
+    pub schedule:Schedule,
     pub world: World,
     pub sdl_context: sdl2::Sdl,
     pub canvas: sdl2::render::Canvas<sdl2::video::Window>,
@@ -24,6 +25,8 @@ pub enum GlProfile {
     _Core43,
     ES3,
 }
+
+
 
 impl Game {
     pub fn new() -> Result<Self, String> {
@@ -77,15 +80,18 @@ impl Game {
             .build()
             .expect("Could not make a canvas");
 
+        let schedule = systems::setup_systems();
+
         Ok(Game {
             world,
             canvas,
             resources,
             sdl_context,
+            schedule
         })
     }
 
-    pub fn tick(&self) -> ConitueToken {
+    pub fn tick(&mut self) -> ConitueToken {
         let mut event_pump = self.sdl_context.event_pump().unwrap();
         for event in event_pump.poll_iter() {
             match event {
@@ -96,11 +102,13 @@ impl Game {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => return ConitueToken::Terminate,
-                _ => {
-                    return ConitueToken::Continue;
-                }
+                _ => {}
             };
         }
+
+        self.schedule.execute(&mut self.world, &mut self.resources);
+        
+
         return ConitueToken::Continue;
     }
 }
@@ -126,10 +134,10 @@ fn main() {
         }
         let ten_millis = time::Duration::from_millis(10);
         thread::sleep(ten_millis);
-        let color =  Color::RGB(0, 0, 0);
+        let color = Color::RGB(0, 0, 0);
         game.canvas.set_draw_color(color);
         game.canvas.clear();
-        let color =  Color::RGB(125, 12, 44);
+        let color = Color::RGB(125, 12, 44);
         game.canvas.set_draw_color(color);
         game.canvas.fill_rect(Rect::new(10, 10, 50, 580)).unwrap();
         game.canvas.present();
