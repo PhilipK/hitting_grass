@@ -13,6 +13,7 @@ features = ["codegen"]
 
 [dependencies]
 rand = "*"
+vector2d = "2.2.0"
 
 
 [target.'cfg(not(windows))'.dependencies.sdl2]

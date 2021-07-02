@@ -1,21 +1,23 @@
+use components::Blade;
+use components::Position;
+use components::Robot;
 use core::time;
+use legion::systems::CommandBuffer;
 use legion::*;
 use legion::{Resources, World};
+use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::{ event::Event};
 use std::thread::{self};
+use vector2d::Vector2D;
 
-
-
-mod systems;
 mod components;
-
+mod systems;
 
 pub struct Game {
     pub resources: Resources,
-    pub schedule:Schedule,
+    pub schedule: Schedule,
     pub world: World,
     pub sdl_context: sdl2::Sdl,
     pub canvas: sdl2::render::Canvas<sdl2::video::Window>,
@@ -26,14 +28,12 @@ pub enum GlProfile {
     ES3,
 }
 
-
-
 impl Game {
     pub fn new() -> Result<Self, String> {
         let sdl_context = sdl2::init()?;
         let video_subsystem = sdl_context.video()?;
-        let world = World::default();
-        let resources = Resources::default();
+        let mut resources = Resources::default();
+        let world = initialize_world(&mut resources);
 
         #[cfg(not(debug_assertions))]
         let bounds = video_subsystem.display_bounds(0)?;
@@ -87,7 +87,7 @@ impl Game {
             canvas,
             resources,
             sdl_context,
-            schedule
+            schedule,
         })
     }
 
@@ -107,10 +107,42 @@ impl Game {
         }
 
         self.schedule.execute(&mut self.world, &mut self.resources);
-        
 
         return ConitueToken::Continue;
     }
+}
+
+fn initialize_world(resources: &mut Resources) -> World {
+    let mut world = World::default();
+    let mut buffer = CommandBuffer::new(&world);
+
+    buffer.push((
+        Robot {
+            radius: 1.,
+            cutting_height: 0.4,
+        },
+        Position {
+            position: Vector2D { x: 50., y: 50. },
+        },
+    ));
+
+    for x in 0..10 {
+        for y in 0..10 {
+            buffer.push((
+                Blade { height: 1. },
+                Position {
+                    position: Vector2D {
+                        x: x as f64,
+                        y: y as f64,
+                    },
+                },
+            ));
+        }
+    }
+
+    buffer.flush(&mut world, resources);
+
+    world
 }
 
 pub enum ConitueToken {
